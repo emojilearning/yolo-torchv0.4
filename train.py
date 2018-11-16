@@ -50,7 +50,7 @@ steps         = [float(step) for step in net_options['steps'].split(',')]
 scales        = [float(scale) for scale in net_options['scales'].split(',')]
 
 #Train parameters
-max_epochs    = max_batches*batch_size/nsamples+1
+max_epochs    = int(max_batches*batch_size/nsamples+1)
 use_cuda      = True
 seed          = int(time.time())
 eps           = 1e-5
@@ -78,11 +78,11 @@ model.load_weights(weightfile)
 model.print_network()
 
 region_loss.seen  = model.seen
-processed_batches = model.seen/batch_size
+processed_batches = model.seen//batch_size
 
 init_width        = model.width
 init_height       = model.height
-init_epoch        = model.seen/nsamples 
+init_epoch        = model.seen//nsamples 
 
 kwargs = {'num_workers': num_workers, 'pin_memory': True} if use_cuda else {}
 test_loader = torch.utils.data.DataLoader(
