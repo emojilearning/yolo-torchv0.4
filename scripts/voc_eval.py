@@ -6,7 +6,7 @@
 
 import xml.etree.ElementTree as ET
 import os,sys
-import cPickle
+import pickle as cPickle
 import numpy as np
 
 def parse_rec(filename):
@@ -101,23 +101,26 @@ def voc_eval(detpath,
     with open(imagesetfile, 'r') as f:
         lines = f.readlines()
     imagenames = [x.strip() for x in lines]
-
-    if not os.path.isfile(cachefile):
+    print(cachefile)
+    # if not os.path.isfile(cachefile):
+    if True:
         # load annots
         recs = {}
-        for i, imagename in enumerate(imagenames):
+        i = 0
+        for imagename in imagenames:
             recs[imagename] = parse_rec(annopath.format(imagename))
-            if i % 100 == 0:
-                print 'Reading annotation for {:d}/{:d}'.format(
-                    i + 1, len(imagenames))
+            i+=1
+            # if i % 100 == 0:
+            #     print('Reading annotation for {:d}/{:d}'.format(
+            #         i + 1, len(imagenames)))
         # save
-        print 'Saving cached annotations to {:s}'.format(cachefile)
-        with open(cachefile, 'w') as f:
-            cPickle.dump(recs, f)
-    else:
-        # load
-        with open(cachefile, 'r') as f:
-            recs = cPickle.load(f)
+        print('Saving cached annotations to {:s}'.format(cachefile))
+    #     with open(cachefile, 'wb') as f:
+    #         cPickle.dump(recs, f) 
+    # else:
+    #     # load
+    #     with open(cachefile, 'rb') as f:
+    #         recs = cPickle.load(f)
 
     # extract gt objects for this class
     class_recs = {}
@@ -202,7 +205,7 @@ def voc_eval(detpath,
 
 
 def _do_python_eval(res_prefix, output_dir = 'output'):
-    _devkit_path = '/data/xiaohang/pytorch-yolo2/VOCdevkit'
+    _devkit_path = '/home/chuguanyi_gmail_com/pytorch-yolo2/data/VOCdevkit'
     _year = '2007'
     _classes = ('__background__', # always index 0
         'aeroplane', 'bicycle', 'bird', 'boat',
@@ -228,20 +231,19 @@ def _do_python_eval(res_prefix, output_dir = 'output'):
     aps = []
     # The PASCAL VOC metric changed in 2010
     use_07_metric = True if int(_year) < 2010 else False
-    print 'VOC07 metric? ' + ('Yes' if use_07_metric else 'No')
+    print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     for i, cls in enumerate(_classes):
         if cls == '__background__':
             continue
-        
         rec, prec, ap = voc_eval(
             filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
             use_07_metric=use_07_metric)
         aps += [ap]
         print('AP for {} = {:.4f}'.format(cls, ap))
-        with open(os.path.join(output_dir, cls + '_pr.pkl'), 'w') as f:
-            cPickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+        # with open(os.path.join(output_dir, cls + '_pr.pkl'), 'w') as f:
+        #     cPickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
     print('Mean AP = {:.4f}'.format(np.mean(aps)))
     print('~~~~~~~~')
     print('Results:')

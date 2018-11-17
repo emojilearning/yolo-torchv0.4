@@ -245,7 +245,7 @@ def test(epoch):
                     if iou > best_iou:
                         best_j = j
                         best_iou = iou
-                if best_iou > iou_thresh and boxes[best_j][6] == box_gt[6]:
+                if best_iou > iou_thresh and int(boxes[best_j][6]) == int(box_gt[6]):
                     correct = correct+1
 
     precision = 1.0*correct/(proposals+eps)
