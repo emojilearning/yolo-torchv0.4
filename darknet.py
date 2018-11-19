@@ -146,15 +146,20 @@ class Darknet(nn.Module):
                 kernel_size = int(block['size'])
                 stride = int(block['stride'])
                 is_pad = int(block['pad'])
+                if 'groups' in block.keys():
+                    ngroup = int(block['groups'])
+                    print(ngroup)
+                else:
+                    ngroup = 1
                 pad = (kernel_size-1)//2 if is_pad else 0
                 activation = block['activation']
                 model = nn.Sequential()
                 if batch_normalize:
-                    model.add_module('conv{0}'.format(conv_id), nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias=False))
+                    model.add_module('conv{0}'.format(conv_id), nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias=False,groups=ngroup))
                     model.add_module('bn{0}'.format(conv_id), nn.BatchNorm2d(filters))
                     #model.add_module('bn{0}'.format(conv_id), BN2d(filters))
                 else:
-                    model.add_module('conv{0}'.format(conv_id), nn.Conv2d(prev_filters, filters, kernel_size, stride, pad))
+                    model.add_module('conv{0}'.format(conv_id), nn.Conv2d(prev_filters, filters, kernel_size, stride, pad,groups=ngroup))
                 if activation == 'leaky':
                     model.add_module('leaky{0}'.format(conv_id), nn.LeakyReLU(0.1, inplace=True))
                 elif activation == 'relu':
@@ -247,6 +252,7 @@ class Darknet(nn.Module):
         header = np.fromfile(fp, count=4, dtype=np.int32)
         self.header = torch.from_numpy(header)
         self.seen = self.header[3]
+        self.seen = 0
         buf = np.fromfile(fp, dtype = np.float32)
         fp.close()
 
@@ -256,7 +262,12 @@ class Darknet(nn.Module):
             if start >= buf.size:
                 break
             ind = ind + 1
-            if block['type'] == 'net':
+            print(ind,block['type'])
+            if ind == 18:
+                start += 512*1024*3*3
+            elif ind == 19:
+                continue 
+            elif block['type'] == 'net':
                 continue
             elif block['type'] == 'convolutional':
                 model = self.models[ind]
