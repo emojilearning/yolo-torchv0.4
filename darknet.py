@@ -14,6 +14,46 @@ class MaxPoolStride1(nn.Module):
         x = F.max_pool2d(F.pad(x, (0,1,0,1), mode='replicate'), 2, stride=1)
         return x
 
+class InvertedResidual(nn.Module):
+    def __init__(self, inp, oup, stride, expand_ratio):
+        super(InvertedResidual, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+
+        hidden_dim = round(inp * expand_ratio)
+        self.use_res_connect = self.stride == 1 and inp == oup
+
+        if expand_ratio == 1:
+            self.conv = nn.Sequential(
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+        else:
+            self.conv = nn.Sequential(
+                # pw
+                nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+
+    def forward(self, x):
+        if self.use_res_connect:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
+
 class Reorg(nn.Module):
     def __init__(self, stride=2):
         super(Reorg, self).__init__()
@@ -84,10 +124,10 @@ class Darknet(nn.Module):
             ind = ind + 1
             #if ind > 0:
             #    return x
-
             if block['type'] == 'net':
                 continue
-            elif block['type'] == 'convolutional' or block['type'] == 'maxpool' or block['type'] == 'reorg' or block['type'] == 'avgpool' or block['type'] == 'softmax' or block['type'] == 'connected':
+            elif block['type'] == 'convolutional' or block['type'] == 'maxpool' or block['type'] == 'reorg'\
+             or block['type'] == 'avgpool' or block['type'] == 'softmax' or block['type'] == 'connected' or block['type'] == 'invertedResidual':
                 x = self.models[ind](x)
                 outputs[ind] = x
             elif block['type'] == 'route':
@@ -123,7 +163,7 @@ class Darknet(nn.Module):
             elif block['type'] == 'cost':
                 continue
             else:
-                print('unknown type %s' % (block['type']))
+                print('unknown type while forward %s' % (block['type']))
         return x
 
     def print_network(self):
@@ -135,6 +175,7 @@ class Darknet(nn.Module):
         prev_filters = 3
         out_filters =[]
         conv_id = 0
+        iv_id = 0
         for block in blocks:
             if block['type'] == 'net':
                 prev_filters = int(block['channels'])
@@ -164,6 +205,20 @@ class Darknet(nn.Module):
                     model.add_module('leaky{0}'.format(conv_id), nn.LeakyReLU(0.1, inplace=True))
                 elif activation == 'relu':
                     model.add_module('relu{0}'.format(conv_id), nn.ReLU(inplace=True))
+                elif activation == 'relu6':
+                    model.add_module('relu6{0}'.format(conv_id),nn.ReLU6(inplace=True))
+                prev_filters = filters
+                out_filters.append(prev_filters)
+                models.append(model)
+            elif block['type'] == 'invertedResidual':
+                iv_id += 1
+                inp = int(block['inp'])
+                oup = int(block['oup'])
+                filters = oup
+                stride = int(block['stride'])
+                ep = int(block['ep'])
+                model = nn.Sequential()
+                model.add_module('invres{0}'.format(iv_id),InvertedResidual(inp,oup,stride,ep))
                 prev_filters = filters
                 out_filters.append(prev_filters)
                 models.append(model)
@@ -243,7 +298,7 @@ class Darknet(nn.Module):
                 out_filters.append(prev_filters)
                 models.append(loss)
             else:
-                print('unknown type %s' % (block['type']))
+                print('unknown type while create %s' % (block['type']))
     
         return models
 
@@ -259,15 +314,19 @@ class Darknet(nn.Module):
         start = 0
         ind = -2
         for block in self.blocks:
+            print(block)
+            print(ind)
             if start >= buf.size:
                 break
             ind = ind + 1
-            print(ind,block['type'])
-            if ind == 18:
-                start += 512*1024*3*3
-            elif ind == 19:
-                continue 
-            elif block['type'] == 'net':
+            # if ind == 14:
+            #     start += 669184
+            #     continue
+            # elif ind == 20:
+            #     continue 
+            #elif ind == 15 or ind == 16:
+                #continue 
+            if block['type'] == 'net':
                 continue
             elif block['type'] == 'convolutional':
                 model = self.models[ind]
@@ -298,8 +357,13 @@ class Darknet(nn.Module):
                 pass
             elif block['type'] == 'cost':
                 pass
+            elif block['type'] == 'invertedResidual':
+                model = self.models[ind][0].conv
+                start = load_conv_bn(buf, start, model[0], model[1])
+                start = load_conv_bn(buf, start, model[3], model[4])
+                start = load_conv_bn(buf, start, model[6], model[7])
             else:
-                print('unknown type %s' % (block['type']))
+                print('unknown type while loading %s' % (block['type']))
 
     def save_weights(self, outfile, cutoff=0):
         if cutoff <= 0:
@@ -321,6 +385,11 @@ class Darknet(nn.Module):
                     save_conv_bn(fp, model[0], model[1])
                 else:
                     save_conv(fp, model[0])
+            elif block['type'] == 'invertedResidual':
+                model = self.models[ind][0].conv
+                save_conv_bn(fp, model[0], model[1])
+                save_conv_bn(fp, model[3], model[4])
+                save_conv_bn(fp, model[6], model[7])
             elif block['type'] == 'connected':
                 model = self.models[ind]
                 if block['activation'] != 'linear':
@@ -344,5 +413,5 @@ class Darknet(nn.Module):
             elif block['type'] == 'cost':
                 pass
             else:
-                print('unknown type %s' % (block['type']))
+                print('unknown type %s while saving' % (block['type']))
         fp.close()

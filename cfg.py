@@ -147,7 +147,14 @@ def print_cfg(blocks):
             out_widths.append(1)
             out_heights.append(1)
             out_filters.append(prev_filters)
-        else:
+        elif block['type'] == 'invertedResidual':
+            filters = int(block['oup'])
+            prev_filters = filters
+            out_widths.append(prev_height)
+            out_heights.append(prev_height)
+            out_filters.append(prev_filters)
+            print('%5d %-6s                            %d  ->  %3d' % (ind, 'invertedResidual', prev_filters,  filters))
+        else: 
             print('unknown type %s' % (block['type']))
 
 def load_conv(buf, start, conv_model):
