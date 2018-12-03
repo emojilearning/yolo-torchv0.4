@@ -1,5 +1,5 @@
-train  = data/voc_train.txt
-valid  = data/2007_test.txt
-names = data/voc.names
+train  = trainvalno5kformarkers.txt
+valid  = 5kmarker.txt
+names = data/names
 backup = backup
 gpus  = 0,1,2,3

@@ -4,7 +4,9 @@ import random
 import os
 from PIL import Image
 import numpy as np
+from PIL import ImageFile
 
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def scale_image_channel(im, c, v):
     cs = list(im.split())

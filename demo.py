@@ -8,15 +8,15 @@ def demo(cfgfile, weightfile):
     m.load_weights(weightfile)
     print('Loading weights from %s... Done!' % (weightfile))
 
-    if m.num_classes == 20:
-        namesfile = 'data/voc.names'
-    elif m.num_classes == 80:
-        namesfile = 'data/coco.names'
-    else:
-        namesfile = 'data/names'
+    # if m.num_classes == 20:
+    #     namesfile = 'data/coco.names'
+    # elif m.num_classes == 80:
+    #     namesfile = 'data/coco.names'
+    # else:
+    namesfile = 'data/names'
     class_names = load_class_names(namesfile)
  
-    use_cuda = 1
+    use_cuda = False
     if use_cuda:
         m.cuda()
 
@@ -29,7 +29,8 @@ def demo(cfgfile, weightfile):
         res, img = cap.read()
         if res:
             sized = cv2.resize(img, (m.width, m.height))
-            bboxes = do_detect(m, sized, 0.5, 0.4, use_cuda)
+            #confidence 
+            bboxes = do_detect(m, sized, 0.1, 0.4, use_cuda)
             print('------')
             draw_img = plot_boxes_cv2(img, bboxes, None, class_names)
             cv2.imshow(cfgfile, draw_img)

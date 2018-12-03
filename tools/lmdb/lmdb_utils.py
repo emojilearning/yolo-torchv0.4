@@ -56,7 +56,7 @@ class lmdbDataset(Dataset):
             elif self.seen < 12000*64*4:
                width = (random.randint(0,6)*2 + 5)*32
                self.shape = (width, width)
-            elif self.seen < 12000*64*4:
+            elif self.seen < 20000*64*4:
                width = (random.randint(0,12) + 5)*32
                self.shape = (width, width)
             else: # self.seen < 20000*64*4:

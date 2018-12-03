@@ -307,7 +307,7 @@ class Darknet(nn.Module):
         header = np.fromfile(fp, count=4, dtype=np.int32)
         self.header = torch.from_numpy(header)
         self.seen = self.header[3]
-        self.seen = 0
+        self.seen = 0 
         buf = np.fromfile(fp, dtype = np.float32)
         fp.close()
 
@@ -319,8 +319,8 @@ class Darknet(nn.Module):
             if start >= buf.size:
                 break
             ind = ind + 1
-            # if ind == 14:
-            #     start += 669184
+            # if ind == 12:
+            #     start += 1313792
             #     continue
             # elif ind == 20:
             #     continue 
