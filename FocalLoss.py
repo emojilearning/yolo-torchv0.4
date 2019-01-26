@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     fl_loss = FL(inputs_fl, targets_fl)
     ce_loss = CE(inputs_ce, targets_ce)
-    print('ce = {}, fl ={}'.format(ce_loss.data[0], fl_loss.data[0]))
+    print('ce = {}, fl ={}'.format(ce_loss.data.item(), fl_loss.data.item()))
     fl_loss.backward()
     ce_loss.backward()
     #print(inputs_fl.grad.data)

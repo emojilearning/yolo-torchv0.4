@@ -364,6 +364,8 @@ class Darknet(nn.Module):
                 start = load_conv_bn(buf, start, model[6], model[7])
             else:
                 print('unknown type while loading %s' % (block['type']))
+        
+        print('loaded')
 
     def save_weights(self, outfile, cutoff=0):
         if cutoff <= 0:
