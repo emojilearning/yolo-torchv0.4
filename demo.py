@@ -16,7 +16,7 @@ def demo(cfgfile, weightfile):
     namesfile = 'data/names'
     class_names = load_class_names(namesfile)
  
-    use_cuda = False
+    use_cuda = True
     if use_cuda:
         m.cuda()
 

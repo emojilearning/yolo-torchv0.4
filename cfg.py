@@ -63,6 +63,17 @@ def print_cfg(blocks):
             out_widths.append(prev_width)
             out_heights.append(prev_height)
             out_filters.append(prev_filters)
+        elif block['type'] == 'upsample':
+            scale = int(block['scale'])
+            width = prev_width*scale
+            height = prev_height*scale
+            print('%5d %-6s    %3d x %3d x%4d   ->   %3d x %3d x%4d' % (ind, 'upsample', prev_width, prev_height, prev_filters, width, height, filters))
+            prev_width = width
+            prev_height = height
+            prev_filters = filters
+            out_widths.append(prev_width)
+            out_heights.append(prev_height)
+            out_filters.append(prev_filters)
         elif block['type'] == 'maxpool':
             pool_size = int(block['size'])
             stride = int(block['stride'])

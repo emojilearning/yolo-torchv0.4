@@ -241,6 +241,8 @@ if __name__ == '__main__':
         fscore = 2.0*precision*recall/(precision+recall+eps)
         logging("precision: %f, recall: %f, fscore: %f" % (precision, recall, fscore))
 
+    torch.save(model,"./backup/lights.weights")
+
     if use_cuda:
         if ngpus > 1:
             model = torch.nn.DataParallel(model).cuda()
@@ -256,6 +258,7 @@ if __name__ == '__main__':
             params += [{'params': [value], 'weight_decay': decay*batch_size}]
     optimizer = optim.SGD(model.parameters(), lr=learning_rate/batch_size, momentum=momentum, dampening=0, weight_decay=decay*batch_size)
     evaluate = False
+
     if evaluate:
         logging('evaluating ...')
         test(0)

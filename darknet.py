@@ -60,13 +60,13 @@ class Reorg(nn.Module):
         self.stride = stride
     def forward(self, x):
         stride = self.stride
-        assert(x.data.dim() == 4)
+        # assert(x.data.dim() == 4)
         B = x.data.size(0)
         C = x.data.size(1)
         H = x.data.size(2)
         W = x.data.size(3)
-        assert(H % stride == 0)
-        assert(W % stride == 0)
+        # assert(H % stride == 0)
+        # assert(W % stride == 0)
         ws = stride
         hs = stride
         x = x.view(B, C, H//hs, hs, W//ws, ws).transpose(3,4).contiguous()
@@ -127,7 +127,7 @@ class Darknet(nn.Module):
             if block['type'] == 'net':
                 continue
             elif block['type'] == 'convolutional' or block['type'] == 'maxpool' or block['type'] == 'reorg'\
-             or block['type'] == 'avgpool' or block['type'] == 'softmax' or block['type'] == 'connected' or block['type'] == 'invertedResidual':
+             or block['type'] == 'avgpool' or block['type'] == 'softmax' or block['type'] == 'connected' or block['type'] == 'invertedResidual' or block['type'] == 'upsample':
                 x = self.models[ind](x)
                 outputs[ind] = x
             elif block['type'] == 'route':
@@ -174,7 +174,8 @@ class Darknet(nn.Module):
     
         prev_filters = 3
         out_filters =[]
-        conv_id = 0
+        conv_id = 0       
+        decon_id = 0
         iv_id = 0
         for block in blocks:
             if block['type'] == 'net':
@@ -220,6 +221,16 @@ class Darknet(nn.Module):
                 model = nn.Sequential()
                 model.add_module('invres{0}'.format(iv_id),InvertedResidual(inp,oup,stride,ep))
                 prev_filters = filters
+                out_filters.append(prev_filters)
+                models.append(model)
+            elif block['type'] == 'upsample':
+                decon_id += 1
+                #                 decon_id += 1
+                # # int(block['scale'])
+                # model = nn.MaxUnpool2d(2,1)
+                model = nn.ConvTranspose2d(prev_filters,prev_filters,2,2,bias=False)
+                # out_filters.append(prev_filters)
+                # model = nn.MaxUnpool2d(int(block['scale']),2)
                 out_filters.append(prev_filters)
                 models.append(model)
             elif block['type'] == 'maxpool':
@@ -307,7 +318,7 @@ class Darknet(nn.Module):
         header = np.fromfile(fp, count=4, dtype=np.int32)
         self.header = torch.from_numpy(header)
         self.seen = self.header[3]
-        self.seen = 0 
+        # self.seen = 0 
         buf = np.fromfile(fp, dtype = np.float32)
         fp.close()
 
@@ -357,6 +368,8 @@ class Darknet(nn.Module):
                 pass
             elif block['type'] == 'cost':
                 pass
+            elif block['type'] == 'upsample':
+                pass
             elif block['type'] == 'invertedResidual':
                 model = self.models[ind][0].conv
                 start = load_conv_bn(buf, start, model[0], model[1])
@@ -398,6 +411,8 @@ class Darknet(nn.Module):
                     save_fc(fc, model)
                 else:
                     save_fc(fc, model[0])
+            elif block['type'] == 'upsample':
+                pass
             elif block['type'] == 'maxpool':
                 pass
             elif block['type'] == 'reorg':

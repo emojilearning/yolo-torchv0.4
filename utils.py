@@ -121,11 +121,12 @@ def get_region_boxes(output, conf_thresh, num_classes, anchors, num_anchors, onl
     assert(output.size(1) == (5+num_classes)*num_anchors)
     h = output.size(2)
     w = output.size(3)
-
     t0 = time.time()
     all_boxes = []
-    output = output.view(batch*num_anchors, 5+num_classes, h*w).transpose(0,1).contiguous().view(5+num_classes, batch*num_anchors*h*w)
+    print(output.shape)
 
+    output = output.view(batch*num_anchors, 5+num_classes, h*w).transpose(0,1).contiguous().view(5+num_classes, batch*num_anchors*h*w)
+    print(output.shape)
     grid_x = torch.linspace(0, w-1, w).repeat(h,1).repeat(batch*num_anchors, 1, 1).view(batch*num_anchors*h*w).cuda()
     grid_y = torch.linspace(0, h-1, h).repeat(w,1).t().repeat(batch*num_anchors, 1, 1).view(batch*num_anchors*h*w).cuda()
     xs = torch.sigmoid(output[0]) + grid_x
@@ -171,13 +172,15 @@ def get_region_boxes(output, conf_thresh, num_classes, anchors, num_anchors, onl
                         conf = det_confs[ind] * cls_max_confs[ind]
     
                     if conf > conf_thresh:
+                        print(cy*w + cx)
+                        print(conf)
                         bcx = xs[ind]
                         bcy = ys[ind]
                         bw = ws[ind]
                         bh = hs[ind]
                         cls_max_conf = cls_max_confs[ind]
                         cls_max_id = cls_max_ids[ind]
-                        box = [bcx/w, bcy/h, bw/w, bh/h, det_conf, cls_max_conf, cls_max_id]
+                        box = [bcx/w, bcy/h, bw/w, bh/h, det_conf, conf, cls_max_id]
                         if (not only_objectness) and validation:
                             for c in range(num_classes):
                                 tmp_conf = cls_confs[ind][c]
@@ -210,10 +213,10 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
     height = img.shape[0]
     for i in range(len(boxes)):
         box = boxes[i]
-        x1 = int(round((box[0] - box[2]/2.0) * width))
-        y1 = int(round((box[1] - box[3]/2.0) * height))
-        x2 = int(round((box[0] + box[2]/2.0) * width))
-        y2 = int(round((box[1] + box[3]/2.0) * height))
+        x1 = int(round((float(box[0]) - float(box[2])/2.0) * width))
+        y1 = int(round((float(box[1]) - float(box[3])/2.0) * height))
+        x2 = int(round((float(box[0]) + float(box[2])/2.0) * width))
+        y2 = int(round((float(box[1]) + float(box[3])/2.0) * height))
 
         if color:
             rgb = color
@@ -337,6 +340,8 @@ def do_detect(model, img, conf_thresh, nms_thresh, use_cuda=1):
     t2 = time.time()
 
     output = model(img)
+    print(output[0,0,0,0])
+
     output = output.data
     #for j in range(100):
     #    sys.stdout.write('%f ' % (output.storage()[j]))
